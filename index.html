@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Título e descrição saem da própria copy da página (o texto do topo do hero
+     e o parágrafo da seção "sobre"). Nada aqui foi inventado. -->
+<title>Montis Studio — Landing pages e sites que elevam sua marca</title>
+<meta name="description" content="Estúdio de design digital. Landing pages e sites que elevam sua marca. Estratégia, design e código — do briefing ao site no ar.">
+<meta name="theme-color" content="#1E2626">
+<link rel="icon" href="assets/favicon.png" sizes="256x256">
+<link rel="apple-touch-icon" href="assets/favicon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:site_name" content="Montis Studio">
+<meta property="og:title" content="Montis Studio — Landing pages e sites que elevam sua marca">
+<meta property="og:description" content="Estúdio de design digital. Landing pages e sites que elevam sua marca. Estratégia, design e código — do briefing ao site no ar.">
+<meta property="og:image" content="uploads/Img%20Fundo%20Hero.webp">
+<meta name="twitter:card" content="summary_large_image">
+
+<!-- Fontes do próprio site. Antes vinham de um @import do fonts.googleapis.com
+     dentro do styles.css; com o Google Fonts indisponível ou bloqueado, a
+     tipografia inteira caía para system-ui. -->
+<link rel="preload" href="assets/fonts/barlow-condensed-600-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/fonts.css">
+<!-- React servido daqui, e não do unpkg.com.
+     O `support.js` é o runtime que monta a página inteira, e ele buscava React e
+     ReactDOM num CDN externo — se aquele CDN ficasse fora do ar, o site não
+     renderizava nada. O `loadReactUmd()` dele começa com
+     `if (window.React && window.ReactDOM) return`, então carregar os dois antes
+     resolve sem precisar tocar no runtime.
+     O Babel, que ele também sabe buscar, só é usado por `x-import` de JSX — que
+     esta página não tem. Confirmado no tráfego: nunca é requisitado. -->
+<script src="./vendor/react.production.min.js"></script>
+<script src="./vendor/react-dom.production.min.js"></script>
+<script src="./support.js"></script>
+<script>
+// Imagem que falhar ao carregar nao pinta nada. Sem isso o navegador desenha a
+// moldura + o icone de "imagem quebrada" no lugar do arquivo ausente — e como o
+// <img> do hero-foreground ocupa a secao inteira, essa moldura virava uma linha
+// atravessando a emenda do hero. Assim que o PNG estiver na pasta, volta sozinho.
+addEventListener('error', function (e) {
+  var el = e.target;
+  if (el && el.tagName === 'IMG') el.style.visibility = 'hidden';
+}, true);
+</script>
+<script src="./vendor/gsap.min.js"></script>
+<script src="./vendor/ScrollTrigger.min.js"></script>
+<script src="./montis-motion.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/industry-8b2f90c3-2ea1-4e8c-9687-54274e0fac11/styles.css">
+<script src="_ds/industry-8b2f90c3-2ea1-4e8c-9687-54274e0fac11/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: #1E2626; color: #1E2626; font-family: "Barlow", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  a:hover { color: #7E8C8A; }
+  input, textarea, select, button { font-family: inherit; }
+  ::selection { background: rgba(20,26,26,.16); }
+  .anim .rv { opacity: 0; transform: translateY(24px); }
+  .anim .rv.in { opacity: 1; transform: none; transition: opacity .7s cubic-bezier(.22,.7,.2,1), transform .7s cubic-bezier(.22,.7,.2,1); }
+  @keyframes montisTag { 0% { opacity:0; transform:translateY(14px); letter-spacing:.5em } 100% { opacity:1; transform:none; letter-spacing:.34em } }
+  @keyframes montisRule { 0% { transform:scaleX(0) } 100% { transform:scaleX(1) } }
+  @media (max-width: 900px) { .hide-sm { display: none !important; } .stack { grid-template-columns: 1fr !important; } }
+
+  /* ---- Camada do texto do hero: o fade progressivo das letras ----
+     A máscara faz as letras irem sumindo de cima para baixo. Ela é aplicada na
+     PRÓPRIA camada do texto (z-index 2), então continua atrás da montanha
+     (z-index 3) — o recorte da montanha é que corta o texto por cima.
+
+     O padding existe por um motivo específico: `mask-repeat: no-repeat` faz o
+     que estiver fora da caixa da máscara ser descartado, e o text-shadow deste
+     texto tem 70px de desfoque. Sem a folga, a sombra seria cortada em seco numa
+     linha reta. A margem negativa cancela esse padding no layout, então a
+     posição do texto não muda um pixel.
+
+     Para calibrar: mexa só nas paradas do gradiente. Mais opaco embaixo = subir
+     os valores finais; fade começando mais cedo = puxar o `45%` para trás. */
+  /* Névoa de verdade: `assets/fog.webp`, gerado a partir do JPG de referência que
+     você salvou. O original tinha o xadrez de transparência gravado nos pixels
+     (era JPG, sem canal alfa); o alfa foi remontado pela luminância e o xadrez,
+     de período medido em 13px, removido por um box blur dessa mesma largura.
+
+     Três camadas do mesmo arquivo, em tamanhos e posições diferentes, derivando
+     em direções opostas: é o que dá volume e movimento em vez de um véu chapado.
+     `background-size: cover` mantém a proporção da nuvem — esticar deixaria o
+     borrão com cara de fumaça achatada. */
+  #hero-fog .cam {
+    position: absolute;
+    /* 150% da largura. A deriva máxima medida é ~190px; isso deixa mais de
+       300px de folga de cada lado, então a borda da nuvem nunca entra em cena —
+       e é 17% menos textura na memória de vídeo do que os 180% iniciais. */
+    left: -25%; right: -25%;
+    background-image: url('assets/fog.webp');
+    background-repeat: no-repeat;
+    background-size: cover;
+    will-change: transform;
+  }
+  /* rolando pela base */
+  #hero-fog .cam-a { bottom: -12%; height: 82%; background-position: 50% 100%; opacity: .95; }
+  /* descendo do alto (invertida na vertical pelo GSAP, para a parte densa ficar em cima) */
+  #hero-fog .cam-b { top: -14%; height: 76%; background-position: 50% 100%; opacity: .8; }
+  /* banda do meio, maior e mais rápida — é a que passa "na frente" */
+  #hero-fog .cam-c { top: 6%; height: 96%; background-position: 50% 76%; opacity: .7; }
+
+  /* ---- Arrastar o leque de projetos ----
+     `touch-action: pan-y` deixa o gesto vertical continuar rolando a página e
+     entrega o horizontal para o nosso arrasto. Sem isso, no celular, o navegador
+     disputa o gesto com a gente. */
+  #fan-stage { cursor: grab; touch-action: pan-y; }
+  /* Com o arrasto ativo o easing passa a ser do GSAP, que pode ser interrompido
+     no meio. A transição CSS de 0.65s dos cartões precisa sair de cena: era ela
+     que, re-disparada a cada virada, deixava o leque eternamente correndo atrás
+     do dedo. A classe é posta pelo JS — se ele não rodar, a transição original
+     continua valendo e os cliques seguem funcionando como antes. */
+  #fan-stage.livre .fan-card { transition: none !important; }
+  #fan-stage.arrastando { cursor: grabbing; user-select: none; }
+  #fan-stage.arrastando .fan-card { cursor: grabbing; }
+
+  /* ---- Abas do cabeçalho ----
+     A pílula de hover precisa de respiro dentro de cada link, senão ela encosta
+     nas letras. Por isso os links ganharam padding e o gap da nav caiu de 30px
+     para 6px — o espaçamento visível entre os itens continua praticamente o
+     mesmo, só migrou de `gap` para `padding`. */
+  .abas > a { position: relative; z-index: 1; padding: 6px 12px; border-radius: 6px; }
+  .aba-realce {
+    position: absolute; top: 50%; left: 0; width: 0; height: 30px; margin-top: -15px;
+    background: rgba(255,255,255,.13); border-radius: 6px;
+    opacity: 0; pointer-events: none; z-index: 0;
+  }
+  .aba-ativa {
+    position: absolute; bottom: -9px; left: 0; width: 0; height: 2px;
+    background: rgba(255,255,255,.92);
+    opacity: 0; pointer-events: none; z-index: 0;
+  }
+
+  /* ---- Cartões com inclinação e brilho ----
+     O brilho é um círculo de tamanho fixo que apenas se DESLOCA atrás do cursor.
+     A alternativa óbvia — mover o centro de um `radial-gradient` por variável
+     CSS — repintaria o gradiente a cada quadro; deslocar é trabalho só de
+     composição. Nestes cartões, que têm backdrop-filter, essa diferença importa. */
+  .tilt { position: relative; overflow: hidden; }
+  .tilt > .brilho {
+    position: absolute; top: 0; left: 0; width: 320px; height: 320px;
+    margin: -160px 0 0 -160px;
+    background: radial-gradient(circle closest-side, rgba(255,255,255,.26), rgba(255,255,255,0));
+    opacity: 0; pointer-events: none; z-index: 0;
+    will-change: transform, opacity;
+  }
+  .tilt > *:not(.brilho) { position: relative; z-index: 1; }
+
+  /* Cada letra é um <span> para poder ir para um lado diferente na dissolução.
+     `inline-block` é obrigatório: <span> inline ignora transform. */
+  .hero-montis > span { display: inline-block; will-change: transform; }
+  .hero-montis {
+    padding: 0.4em 0;
+    margin: -0.4em 0;
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgba(0,0,0,.90) 55%, rgba(0,0,0,.66) 64%, rgba(0,0,0,.42) 71%, rgba(0,0,0,.26) 76%, rgba(0,0,0,.10) 86%, rgba(0,0,0,0) 100%);
+            mask-image: linear-gradient(180deg, #000 0%, #000 45%, rgba(0,0,0,.90) 55%, rgba(0,0,0,.66) 64%, rgba(0,0,0,.42) 71%, rgba(0,0,0,.26) 76%, rgba(0,0,0,.10) 86%, rgba(0,0,0,0) 100%);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+            mask-size: 100% 100%;
+  }
+
+  /* O GSAP passa a controlar as entradas. Desligo o reveal por CSS para os dois
+     nao brigarem pelo mesmo opacity/transform — o IntersectionObserver da pagina
+     continua marcando .in, mas a classe deixa de ter efeito visual. Se o GSAP
+     nao carregar, tudo fica visivel: nada depende de JS para aparecer. */
+  .anim .rv, .anim .rv.in { opacity: 1; transform: none; transition: none; }
+
+  /* CTA de vidro (header). O snippet trazia so a estrutura — glass-button-wrap /
+     glass-button / glass-button-text / glass-button-shadow — e nao o CSS do
+     efeito, entao ele foi escrito aqui na mesma linguagem de vidro que os cards
+     da pagina ja usam (mesmo blur, mesma borda, mesmos brilhos internos). */
+  .glass-button-wrap { position: relative; display: inline-flex; border-radius: 100px; }
+  .glass-button-shadow { position: absolute; inset: 0; z-index: 0; pointer-events: none; border-radius: 100px; box-shadow: 0 12px 30px rgba(20,26,26,.5); transition: box-shadow .4s cubic-bezier(.22,.7,.2,1); }
+  .glass-button { position: relative; z-index: 1; isolation: isolate; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.28); border-radius: 100px; background: linear-gradient(145deg,rgba(255,255,255,.24),rgba(255,255,255,.08)); -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.1); cursor: pointer; transition: background .35s, border-color .35s, transform .35s cubic-bezier(.22,.7,.2,1); }
+  .glass-button, .glass-button:hover { color: #FFFFFF; }
+  .glass-button-text { position: relative; display: block; user-select: none; padding: 10px 20px; font-size: 13.5px; font-weight: 600; letter-spacing: .01em; }
+  .glass-button-wrap:hover .glass-button { background: linear-gradient(145deg,rgba(255,255,255,.34),rgba(255,255,255,.14)); border-color: rgba(255,255,255,.45); transform: translateY(-1px); }
+  .glass-button-wrap:hover .glass-button-shadow { box-shadow: 0 16px 38px rgba(20,26,26,.62); }
+  .glass-button-wrap:active .glass-button { transform: translateY(0); }
+
+  /* CTA final: anel de luz girando. Usa a propriedade `scale` em vez de
+     transform porque .rv.in fixa transform:none na animacao de entrada — as
+     duas coisas se atropelariam. */
+  @keyframes montisRainbow { 100% { transform: rotate(1turn); } }
+  .rainbow-cta { position: relative; z-index: 0; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; padding: 2px; border-radius: 100px; background: rgba(255,255,255,.15); transition: scale .3s cubic-bezier(.22,.7,.2,1); }
+  .rainbow-cta::before { content: ''; position: absolute; z-index: -2; left: -50%; top: -50%; width: 200%; height: 200%; background-position: 100% 50%; background-repeat: no-repeat; background-size: 50% 30%; filter: blur(6px); background-image: linear-gradient(#FFF); animation: montisRainbow 4s linear infinite; }
+  /* Pausada quando a seção está fora da tela — o GSAP tira a classe ao entrar.
+     Se o GSAP não carregar, a classe nunca é aplicada e o anel gira normal. */
+  .rainbow-cta.fora-de-campo::before { animation-play-state: paused; }
+  .rainbow-cta:hover { scale: 1.05; }
+  .rainbow-cta:active { scale: 1; }
+  .rainbow-cta > a { display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; border-radius: 100px; font-size: 15px; font-weight: 600; background: rgba(30,38,38,.8); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .rainbow-cta > a, .rainbow-cta > a:hover { color: #FFFFFF; }
+  /* Precisa vir depois do neutralizador acima, senao o transition:none dele
+     mataria o hover deste botao. */
+  .rainbow-cta.rv, .rainbow-cta.rv.in { transition: scale .3s cubic-bezier(.22,.7,.2,1); }
+  @media (prefers-reduced-motion: reduce) { .rainbow-cta::before { animation: none; } }
+</style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="background:#1E2626;overflow-x:clip">
+
+<header id="site-header" style="position:fixed;top:0;left:0;right:0;z-index:60;background:transparent;border-bottom:1px solid transparent;text-shadow:0 2px 16px rgba(20,26,26,.55);transition:background .45s ease,border-color .45s ease,box-shadow .45s ease,text-shadow .45s ease">
+  <div style="width:100%;padding:14px clamp(16px,2.2vw,32px);display:flex;align-items:center;gap:clamp(16px,3vw,40px)">
+    <a href="#top" style="display:flex;align-items:center;flex:none"><img src="assets/logo-white.png" alt="Montis Studio" style="height:30px;width:auto"></a>
+    <nav class="hide-sm abas" style="display:flex;gap:6px;margin-left:auto;font-size:14px;letter-spacing:.005em;color:rgba(255,255,255,.7);position:relative">
+      <span class="aba-realce" aria-hidden="true"></span>
+      <span class="aba-ativa" aria-hidden="true"></span>
+      <a href="#servicos" style="transition:color .25s" style-hover="color:#fff">Serviços</a>
+      <a href="#importancia" style="transition:color .25s" style-hover="color:#fff">Importância</a>
+      <a href="#sobre" style="transition:color .25s" style-hover="color:#fff">Sobre</a>
+      <a href="#projetos" style="transition:color .25s" style-hover="color:#fff">Projetos</a>
+      <a href="#contato" style="transition:color .25s" style-hover="color:#fff">Contato</a>
+    </nav>
+    <div class="glass-button-wrap" style="margin-left:auto;flex:none"><a class="glass-button" href="#contato"><span class="glass-button-text">Solicitar projeto</span></a><div class="glass-button-shadow"></div></div>
+  </div>
+</header>
+
+<section id="top" style="position:relative;height:100svh;min-height:620px;overflow:hidden;background:#1E2626">
+  <img id="hero-bg" src="uploads/Img%20Fundo%20Hero.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center">
+  <!-- A imagem final só aparece quando já preenche a tela inteira, com o mesmo
+       enquadramento da foto aberta. Enquanto ela for menor que o quadro, fica
+       invisível — é essa regra que elimina a borda retangular que denunciava a
+       troca. Ver o comentário do `aplicarZoom` em montis-motion.js. -->
+  <img id="hero-inter" src="uploads/Img%20Fundo%20Intermediaria%20Hero.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:1;opacity:0;pointer-events:none">
+  <img id="hero-final" src="uploads/Img%20Fundo%20Final%20Hero.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:1;opacity:0;pointer-events:none">
+  <div style="position:absolute;left:0;right:0;top:38%;transform:translateY(-50%);z-index:2;text-align:center;pointer-events:none">
+    <div class="hero-montis" style="font-family:'Barlow',system-ui,sans-serif;font-weight:600;font-size:clamp(72px,20vw,420px);line-height:.86;letter-spacing:.01em;color:rgba(255,255,255,.94);text-shadow:0 2px 0 rgba(255,255,255,.35),0 26px 70px rgba(20,26,26,.45)"><span>M</span><span>O</span><span>N</span><span>T</span><span>I</span><span>S</span></div>
+  </div>
+  <img id="hero-fg" src="assets/hero-foreground.webp" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:3;pointer-events:none">
+  <!-- Névoa. Floresce em cima de cada troca de imagem e some depois. É o que
+       esconde a troca: o olho não encontra a emenda porque, no instante em que
+       ela acontece, a cena está tomada por neblina. -->
+  <div id="hero-fog" aria-hidden="true" style="position:absolute;inset:0;z-index:4;opacity:0;pointer-events:none;overflow:hidden">
+    <div class="cam cam-a"></div>
+    <div class="cam cam-b"></div>
+    <div class="cam cam-c"></div>
+  </div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:46%;z-index:5;pointer-events:none;background:linear-gradient(180deg,rgba(33,42,42,0) 0%,rgba(33,42,42,.06) 30%,rgba(33,42,42,.16) 52%,rgba(35,44,44,.3) 72%,rgba(35,44,44,.44) 88%,rgba(35,44,44,.5) 100%)"></div>
+  <div style="position:absolute;inset:0;z-index:6;pointer-events:none">
+    <div id="hero-tx-esq" style="position:absolute;top:clamp(84px,10vh,120px);left:clamp(18px,2.4vw,34px);max-width:34ch;font-size:12.5px;line-height:1.5;letter-spacing:.02em;color:rgba(255,255,255,.82);text-shadow:0 2px 14px rgba(20,26,26,.6)">Estúdio de design digital.<br>Landing pages e sites que<br>elevam sua marca.</div>
+    <div id="hero-tx-dir" style="position:absolute;top:clamp(84px,10vh,120px);right:clamp(18px,2.4vw,34px);max-width:24ch;text-align:right;font-size:12.5px;line-height:1.5;letter-spacing:.02em;color:rgba(255,255,255,.82);text-shadow:0 2px 14px rgba(20,26,26,.6)">Estratégia · Design<br>Código</div>
+    <div id="hero-tag" style="position:absolute;top:calc(38% - clamp(52px,11.4vw,232px));left:0;right:0;display:flex;align-items:center;justify-content:center;gap:clamp(10px,1.6vw,22px);opacity:0">
+      <span style="width:clamp(28px,6vw,110px);height:1px;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.72));transform-origin:right center"></span>
+      <span style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:500;font-size:clamp(12px,1.35vw,22px);text-transform:uppercase;letter-spacing:.34em;white-space:nowrap;color:rgba(255,255,255,.9);text-shadow:0 2px 18px rgba(20,26,26,.7)">Acima do comum</span>
+      <span style="width:clamp(28px,6vw,110px);height:1px;background:linear-gradient(90deg,rgba(255,255,255,.72),rgba(255,255,255,0));transform-origin:left center"></span>
+    </div>
+    <div id="hero-scroll" style="position:absolute;bottom:clamp(22px,4vh,40px);left:0;right:0;display:flex;justify-content:center">
+      <a href="#servicos" style="pointer-events:auto;display:inline-flex;align-items:center;gap:9px;font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.86);text-shadow:0 2px 14px rgba(20,26,26,.6)">
+        Comece a subida
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section style="position:relative;overflow:hidden;margin-top:-1px;background:linear-gradient(180deg,#232C2C 0px,#232C2C 96px,rgba(35,44,44,0) clamp(300px,44vh,520px)),radial-gradient(1100px 620px at 18% 8%,#2E3A3A 0%,#232C2C 55%,#1B2222 92%,#1B2222 100%);padding:clamp(64px,8vw,120px) 0">
+  <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:clamp(420px,62vh,720px);pointer-events:none;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.42) 10%,rgba(0,0,0,.3) 22%,rgba(0,0,0,.17) 33%,rgba(0,0,0,.08) 43%,rgba(0,0,0,.03) 52%,rgba(0,0,0,0) 60%);mask-image:linear-gradient(180deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.42) 10%,rgba(0,0,0,.3) 22%,rgba(0,0,0,.17) 33%,rgba(0,0,0,.08) 43%,rgba(0,0,0,.03) 52%,rgba(0,0,0,0) 60%)">
+    <!-- Espelha a IMAGEM FINAL, não a aberta: depois do zoom o hero termina
+         exibindo `Img Fundo Final Hero.png` em escala 1, então é a última linha
+         dela que precisa ser refletida aqui para a emenda continuar invisível.
+         O recorte da montanha saiu porque ele pertence à foto aberta e não
+         corresponde a nada na imagem final. -->
+    <img src="uploads/Img%20Fundo%20Final%20Hero.webp" alt="" style="position:absolute;top:0;left:0;width:100%;height:100svh;min-height:620px;object-fit:cover;object-position:center;transform:scaleY(-1)">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(35,44,44,0) 0%,rgba(35,44,44,.42) 26%,rgba(35,44,44,.62) 44%,rgba(35,44,44,.78) 58%,rgba(35,44,44,.88) 70%)"></div>
+  </div>
+  <div style="position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px);display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:clamp(36px,5vw,80px);align-items:start">
+    <div>
+      <h2 class="rv" style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(28px,2.9vw,42px);line-height:1.08;letter-spacing:-.015em;color:#FFFFFF;margin:0;max-width:20ch;display:flex;flex-direction:column;gap:.1em"><span>Onde grandes marcas ganham altitude.</span><span style="font-size:.62em;font-weight:500;letter-spacing:.005em;color:rgba(255,255,255,.72)">Construa sua presença. Eleve sua marca.</span></h2>
+      <p class="rv" style="margin:20px 0 0;max-width:48ch;font-size:16px;line-height:1.68;color:rgba(255,255,255,.66)">Empresas sérias perdem contratos por parecerem improvisadas na tela. Na Montis, o mesmo profissional pensa, desenha e programa cada página — do briefing ao site no ar, sem etapa terceirizada.</p>
+      <div class="rv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:clamp(16px,2vw,28px);margin-top:clamp(30px,4vw,48px)">
+        <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:14px">
+          <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:19px;font-weight:600;color:#FFFFFF;letter-spacing:.01em">Estratégia</div>
+          <div style="font-size:13.5px;color:rgba(255,255,255,.5);margin-top:2px">Decidido antes do primeiro pixel</div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:14px">
+          <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:19px;font-weight:600;color:#FFFFFF;letter-spacing:.01em">Design</div>
+          <div style="font-size:13.5px;color:rgba(255,255,255,.5);margin-top:2px">Sua identidade em cada tela</div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.2);padding-top:14px">
+          <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:19px;font-weight:600;color:#FFFFFF;letter-spacing:.01em">Código</div>
+          <div style="font-size:13.5px;color:rgba(255,255,255,.5);margin-top:2px">Leve, rápido e no ar</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;gap:14px">
+      <div class="rv tilt" style="display:flex;gap:18px;align-items:flex-start;padding:24px 26px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <div style="flex:none;width:46px;height:46px;border-radius:5px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(255,255,255,.62));box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 16px rgba(0,0,0,.28);display:grid;place-items:center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#232C2C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+        </div>
+        <div>
+          <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:20px;font-weight:600;color:#FFFFFF;letter-spacing:.005em">Feito sob medida</div>
+          <p style="margin:4px 0 0;font-size:14.5px;line-height:1.55;color:rgba(255,255,255,.62)">Nasce do seu posicionamento, não de um template comprado.</p>
+        </div>
+      </div>
+      <div class="rv tilt" style="display:flex;gap:18px;align-items:flex-start;padding:24px 26px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <div style="flex:none;width:46px;height:46px;border-radius:5px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(255,255,255,.62));box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 16px rgba(0,0,0,.28);display:grid;place-items:center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#232C2C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="13" height="11" rx="1.5"></rect><path d="M6 19h6"></path><path d="M9 15v4"></path><rect x="17" y="9" width="5" height="11" rx="1.5"></rect></svg>
+        </div>
+        <div>
+          <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:20px;font-weight:600;color:#FFFFFF;letter-spacing:.005em">Impecável em qualquer tela</div>
+          <p style="margin:4px 0 0;font-size:14.5px;line-height:1.55;color:rgba(255,255,255,.62)">Desktop, tablet e celular desenhados um por um — não apenas encolhidos.</p>
+        </div>
+      </div>
+      <div class="rv tilt" style="display:flex;gap:18px;align-items:flex-start;padding:24px 26px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <div style="flex:none;width:46px;height:46px;border-radius:5px;background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(255,255,255,.62));box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 16px rgba(0,0,0,.28);display:grid;place-items:center">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#232C2C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h8l-1 8 10-12h-8z"></path></svg>
+        </div>
+        <div>
+          <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:20px;font-weight:600;color:#FFFFFF;letter-spacing:.005em">Abre antes de perder o visitante</div>
+          <p style="margin:4px 0 0;font-size:14.5px;line-height:1.55;color:rgba(255,255,255,.62)">Páginas leves, sem plugins pesados e sem tempo de espera.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="servicos" style="position:relative;overflow:hidden;background:radial-gradient(1100px 760px at 78% 52%,#2A3535 0%,#222B2B 48%,#1B2222 100%);padding:clamp(72px,9vw,140px) 0">
+  <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:clamp(180px,26vh,300px);pointer-events:none;background:linear-gradient(180deg,#1B2222 0%,rgba(27,34,34,.86) 30%,rgba(27,34,34,.5) 62%,rgba(27,34,34,0) 100%)"></div>
+  <div aria-hidden="true" style="position:absolute;left:0;right:0;bottom:0;height:clamp(180px,26vh,300px);pointer-events:none;background:linear-gradient(180deg,rgba(27,34,34,0) 0%,rgba(27,34,34,.55) 55%,#1B2222 100%)"></div>
+  <div style="max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px)">
+    <div class="rv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;align-items:end;margin-bottom:clamp(30px,4vw,52px)">
+      <h2 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(30px,3.4vw,50px);line-height:1.04;letter-spacing:-.02em;color:#FFFFFF;margin:0;max-width:14ch">Feita para o topo. Páginas à altura da sua marca.</h2>
+      <p style="margin:0;max-width:46ch;font-size:15.5px;line-height:1.66;color:rgba(255,255,255,.66);justify-self:end">Tudo o que sua empresa precisa para sair de uma ideia solta a uma presença digital que sustenta o preço que você cobra.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:clamp(16px,1.6vw,22px)">
+      <div class="rv tilt" style="padding:28px 26px 32px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1.5"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:23px;color:#FFFFFF;margin:16px 0 8px;letter-spacing:.005em">Landing Pages</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.64)">Uma página, um objetivo: transformar quem chega em conversa qualificada.</p>
+      </div>
+      <div class="rv tilt" style="padding:28px 26px 32px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M10 21v-6h4v6"></path></svg>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:23px;color:#FFFFFF;margin:16px 0 8px;letter-spacing:.005em">Sites institucionais</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.64)">Para quando o cliente pesquisa sua empresa antes de responder — e precisa encontrar autoridade.</p>
+      </div>
+      <div class="rv tilt" style="padding:28px 26px 32px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="1.5"></rect><path d="m7 14 3-3 2.5 2.5L16 10l3 3"></path><circle cx="9" cy="8" r="1"></circle></svg>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:23px;color:#FFFFFF;margin:16px 0 8px;letter-spacing:.005em">Portfólios</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.64)">Seu trabalho apresentado como merece: imagem grande, texto curto, nada competindo.</p>
+      </div>
+      <div class="rv tilt" style="padding:28px 26px 32px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:23px;color:#FFFFFF;margin:16px 0 8px;letter-spacing:.005em">Redesign</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.64)">Sua página atual não está errada — está desatualizada. Nós a trazemos para hoje.</p>
+      </div>
+      <div class="rv tilt" style="padding:28px 26px 32px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5"></path><path d="m3 13 9 5 9-5"></path></svg>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:23px;color:#FFFFFF;margin:16px 0 8px;letter-spacing:.005em">UI/UX Design</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.64)">Hierarquia clara, caminho óbvio: o visitante entende sem esforço o que fazer.</p>
+      </div>
+      <div class="rv tilt" style="padding:28px 26px 32px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.15);border-radius:6px;backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 20px 44px rgba(0,0,0,.38);transition:transform .4s cubic-bezier(.22,.7,.2,1),border-color .4s,box-shadow .4s" style-hover="transform:translateY(-4px);border-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 26px 56px rgba(0,0,0,.46)"><span class="brilho" aria-hidden="true"></span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="14" height="10" rx="1.5"></rect><rect x="18" y="9" width="4" height="10" rx="1.5"></rect><path d="M6 19h6"></path></svg>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:23px;color:#FFFFFF;margin:16px 0 8px;letter-spacing:.005em">Responsividade real</h3>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.64)">A maioria dos seus visitantes chega pelo celular. Projetamos por ali primeiro.</p>
+      </div>
+    </div>
+</div>
+</section>
+
+<section id="importancia" style="position:relative;overflow:hidden;background:linear-gradient(180deg,#1B2222 0%,#1E2626 34%,#1E2626 100%);padding:clamp(70px,9vw,140px) 0">
+  <div aria-hidden="true" style="position:absolute;left:0;right:0;top:0;height:clamp(160px,22vh,260px);pointer-events:none;background:linear-gradient(180deg,#1B2222 0%,rgba(27,34,34,.7) 45%,rgba(27,34,34,0) 100%)"></div>
+  <div style="position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px)">
+    <div class="rv" style="display:flex;align-items:center;gap:14px;margin-bottom:clamp(24px,3vw,40px)">
+      <span style="width:34px;height:1px;background:rgba(255,255,255,.4)"></span>
+      <span style="font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.6)">O que está em jogo</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:clamp(28px,4vw,72px);align-items:end">
+      <h2 class="rv" style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(32px,4.2vw,64px);line-height:1.02;letter-spacing:-.02em;color:#FFFFFF;margin:0;max-width:16ch">Sua página negocia por você antes da primeira conversa.</h2>
+      <p class="rv" style="margin:0 0 6px;max-width:46ch;font-size:16px;line-height:1.68;color:rgba(255,255,255,.68);justify-self:end">O cliente decide em segundos se você é a escolha evidente ou apenas mais um orçamento a comparar. Essa decisão acontece na tela, sem você presente.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(20px,3vw,44px);margin-top:clamp(48px,6vw,96px)">
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:22px">
+        <div style="font-size:11.5px;letter-spacing:.22em;color:rgba(255,255,255,.42);margin-bottom:12px">01</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:26px;color:#FFFFFF;margin:0 0 8px">Preço sem desconto</h3>
+        <p style="margin:0;font-size:15px;line-height:1.62;color:rgba(255,255,255,.62);max-width:34ch">Quem parece caro é questionado menos. O design sustenta o valor que você cobra.</p>
+      </div>
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:22px">
+        <div style="font-size:11.5px;letter-spacing:.22em;color:rgba(255,255,255,.42);margin-bottom:12px">02</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:26px;color:#FFFFFF;margin:0 0 8px">Entendido em 5 segundos</h3>
+        <p style="margin:0;font-size:15px;line-height:1.62;color:rgba(255,255,255,.62);max-width:34ch">Se o visitante precisa procurar o que você faz, ele já foi para o próximo.</p>
+      </div>
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:22px">
+        <div style="font-size:11.5px;letter-spacing:.22em;color:rgba(255,255,255,.42);margin-bottom:12px">03</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:26px;color:#FFFFFF;margin:0 0 8px">Contato no lugar de visita</h3>
+        <p style="margin:0;font-size:15px;line-height:1.62;color:rgba(255,255,255,.62);max-width:34ch">Estrutura, texto e um único caminho conduzem até a mensagem no seu WhatsApp.</p>
+      </div>
+    </div>
+    <p class="rv" style="margin:clamp(56px,7vw,110px) 0 0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.06em;font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(26px,3.6vw,54px);line-height:1.08;letter-spacing:-.015em;color:#FFFFFF">
+      <span>Estar online é o mínimo.</span>
+      <span>Sua página precisa fazer</span>
+      <span>o cliente confiar antes de falar.</span>
+    </p>
+  </div>
+</section>
+
+<section id="sobre" style="background:#232C2C;padding:clamp(64px,8vw,120px) 0">
+  <div style="max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px);display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:clamp(32px,4vw,72px);align-items:center">
+    <div>
+      <div class="rv" style="display:flex;align-items:center;gap:14px;margin-bottom:26px">
+        <span style="width:34px;height:1px;background:rgba(255,255,255,.35)"></span>
+        <span style="font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.6)">Diego Martins · Montis</span>
+      </div>
+      <h2 class="rv" style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(30px,3.6vw,54px);line-height:1.04;letter-spacing:-.02em;color:#FFFFFF;margin:0;max-width:17ch">Por trás da Montis: Diego Martins.</h2>
+      <p class="rv" style="margin:24px 0 0;max-width:50ch;font-size:16px;line-height:1.7;color:rgba(255,255,255,.66)">Transformamos ideias, serviços e marcas em experiências digitais que unem design, estratégia e conversão. Criamos landing pages modernas e personalizadas, pensadas para transmitir profissionalismo, destacar o que torna cada negócio único e transformar visitantes em oportunidades reais.</p>
+      <p class="rv" style="margin:18px 0 0;max-width:50ch;font-size:16px;line-height:1.7;color:rgba(255,255,255,.66)">Trabalho com poucos projetos por vez por escolha. Cada página passa inteira pelas minhas mãos, do primeiro rascunho ao domínio no ar, e quem responde a sua mensagem é quem está construindo o seu site. Se o que está no ar hoje já não representa o tamanho do que você faz, é sobre isso que conversamos primeiro.</p>
+      <div class="rv" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:32px">
+        <span style="border:1px solid rgba(255,255,255,.22);border-radius:100px;padding:8px 16px;font-size:13px;color:#FFFFFF">Poucos projetos por vez</span>
+        <span style="border:1px solid rgba(255,255,255,.22);border-radius:100px;padding:8px 16px;font-size:13px;color:#FFFFFF">Do briefing ao site no ar</span>
+        <span style="border:1px solid rgba(255,255,255,.22);border-radius:100px;padding:8px 16px;font-size:13px;color:#FFFFFF">Você fala direto comigo</span>
+      </div>
+    </div>
+    <div class="rv" style="position:relative">
+      <div style="position:absolute;inset:auto -14px -14px auto;width:62%;height:70%;background:rgba(255,255,255,.07);border-radius:16px"></div>
+      <div style="position:relative;border-radius:16px;overflow:hidden;background:rgba(255,255,255,.07);aspect-ratio:4/5">
+        <img id="foto-diego" src="uploads/Foto%20Diego.webp" alt="Diego Martins, fundador da Montis Studio" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 25%">
+      </div>
+    </div>
+  </div>
+</section>
+
+<sc-if value="{{ showProcess }}" hint-placeholder-val="{{ true }}">
+<section style="background:#1E2626;padding:clamp(60px,7vw,110px) 0">
+  <div style="max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px)">
+    <div class="rv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;align-items:end;margin-bottom:clamp(34px,4vw,60px)">
+      <h2 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(30px,3.4vw,50px);line-height:1.04;letter-spacing:-.02em;color:#FFFFFF;margin:0">Como um projeto acontece.</h2>
+      <p style="margin:0;max-width:42ch;font-size:15.5px;line-height:1.66;color:rgba(255,255,255,.66);justify-self:end">Cinco etapas, prazo definido em cada uma e nada acontecendo sem você saber.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(198px,1fr));gap:clamp(14px,2vw,26px)">
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:20px">
+        <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:38px;font-weight:600;color:rgba(255,255,255,.34);line-height:1">01</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:21px;color:#FFFFFF;margin:10px 0 6px">Briefing</h3>
+        <p style="margin:0;font-size:14px;line-height:1.58;color:rgba(255,255,255,.66)">Uma conversa para entender o negócio, o cliente e a meta da página.</p>
+      </div>
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:20px">
+        <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:38px;font-weight:600;color:rgba(255,255,255,.34);line-height:1">02</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:21px;color:#FFFFFF;margin:10px 0 6px">Estratégia</h3>
+        <p style="margin:0;font-size:14px;line-height:1.58;color:rgba(255,255,255,.66)">Estrutura, texto e direção visual decididos antes de desenhar.</p>
+      </div>
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:20px">
+        <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:38px;font-weight:600;color:rgba(255,255,255,.34);line-height:1">03</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:21px;color:#FFFFFF;margin:10px 0 6px">Design</h3>
+        <p style="margin:0;font-size:14px;line-height:1.58;color:rgba(255,255,255,.66)">A estratégia virando tela, com sua aprovação a cada versão.</p>
+      </div>
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:20px">
+        <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:38px;font-weight:600;color:rgba(255,255,255,.34);line-height:1">04</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:21px;color:#FFFFFF;margin:10px 0 6px">Desenvolvimento</h3>
+        <p style="margin:0;font-size:14px;line-height:1.58;color:rgba(255,255,255,.66)">Código próprio, leve, testado em celular, tablet e desktop.</p>
+      </div>
+      <div class="rv" style="border-top:1px solid rgba(255,255,255,.18);padding-top:20px">
+        <div style="font-family:'Barlow Condensed',system-ui,sans-serif;font-size:38px;font-weight:600;color:rgba(255,255,255,.34);line-height:1">05</div>
+        <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:21px;color:#FFFFFF;margin:10px 0 6px">Publicação</h3>
+        <p style="margin:0;font-size:14px;line-height:1.58;color:rgba(255,255,255,.66)">Revisão final, domínio configurado e sua página no ar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</sc-if>
+
+<section id="projetos" style="background:#FFFFFF;padding:clamp(64px,8vw,120px) 0">
+  <div style="max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px)">
+    <div class="rv" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;align-items:end;margin-bottom:clamp(32px,4vw,56px)">
+      <h2 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(32px,3.8vw,56px);line-height:1.02;letter-spacing:-.02em;color:#1E2626;margin:0">O que já subiu.</h2>
+      <p style="margin:0;max-width:42ch;font-size:15.5px;line-height:1.66;color:#5C6A68;justify-self:end">Projetos entregues e no ar — clique para ver cada um.</p>
+    </div>
+
+    <div id="fan-stage" style="position:relative;height:clamp(430px,58vw,560px);margin:clamp(8px,2vw,24px) 0 0;display:flex;align-items:center;justify-content:center">
+      <div class="fan-card" data-i="0" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
+        <div class="fan-slot" style="position:absolute;inset:0;color:rgba(255,255,255,.72)"><image-slot id="montis-proj-1" shape="rect" placeholder="Screenshot QOPS"></image-slot></div>
+        <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(20,26,26,.28) 0%,rgba(20,26,26,0) 32%,rgba(20,26,26,.82) 100%)"></div>
+        <div style="position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;pointer-events:none">
+          <span style="background:#FFFFFF;color:#1E2626;font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:8px 16px;border-radius:100px">Agronegócio</span>
+        </div>
+        <div style="position:absolute;left:22px;right:22px;bottom:22px;pointer-events:none">
+          <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:30px;color:#FFFFFF;margin:0 0 6px;letter-spacing:.005em">QOPS</h3>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.74)">Página comercial para operação agrícola: linguagem técnica, um só caminho até o contato.</p>
+        </div>
+      </div>
+      <div class="fan-card" data-i="1" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
+        <div class="fan-slot" style="position:absolute;inset:0;color:rgba(255,255,255,.72)"><image-slot id="montis-proj-2" shape="rect" placeholder="Screenshot Architecture Studio"></image-slot></div>
+        <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(20,26,26,.28) 0%,rgba(20,26,26,0) 32%,rgba(20,26,26,.82) 100%)"></div>
+        <div style="position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;pointer-events:none">
+          <span style="background:#FFFFFF;color:#1E2626;font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:8px 16px;border-radius:100px">Arquitetura</span>
+        </div>
+        <div style="position:absolute;left:22px;right:22px;bottom:22px;pointer-events:none">
+          <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:30px;color:#FFFFFF;margin:0 0 6px;letter-spacing:.005em">Architecture Studio</h3>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.74)">Portfólio editorial construído em volta das fotos dos projetos do escritório.</p>
+        </div>
+      </div>
+      <div class="fan-card" data-i="2" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
+        <div class="fan-slot" style="position:absolute;inset:0;color:rgba(255,255,255,.72)"><image-slot id="montis-proj-3" shape="rect" placeholder="Screenshot Professional Services"></image-slot></div>
+        <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(20,26,26,.28) 0%,rgba(20,26,26,0) 32%,rgba(20,26,26,.82) 100%)"></div>
+        <div style="position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;pointer-events:none">
+          <span style="background:#FFFFFF;color:#1E2626;font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:8px 16px;border-radius:100px">Serviços</span>
+        </div>
+        <div style="position:absolute;left:22px;right:22px;bottom:22px;pointer-events:none">
+          <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:30px;color:#FFFFFF;margin:0 0 6px;letter-spacing:.005em">Professional Services</h3>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.74)">Estrutura curta e direta, pensada para agendar reuniões em vez de informar.</p>
+        </div>
+      </div>
+      <div class="fan-card" data-i="3" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
+        <div class="fan-slot" style="position:absolute;inset:0;color:rgba(255,255,255,.72)"><image-slot id="montis-proj-4" shape="rect" placeholder="Screenshot do próximo projeto"></image-slot></div>
+        <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(20,26,26,.28) 0%,rgba(20,26,26,.15) 32%,rgba(20,26,26,.86) 100%)"></div>
+        <div style="position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;pointer-events:none">
+          <span style="background:#FFFFFF;color:#1E2626;font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:8px 16px;border-radius:100px">Em breve</span>
+        </div>
+        <div style="position:absolute;left:22px;right:22px;bottom:22px;pointer-events:none">
+          <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:30px;color:#FFFFFF;margin:0 0 6px;letter-spacing:.005em">O próximo é o seu.</h3>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.74)">Este espaço está reservado para o próximo projeto que a Montis colocar no ar.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="fan-nav" style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:clamp(22px,3vw,38px)">
+      <button type="button" aria-label="Projeto anterior" style="width:44px;height:44px;border-radius:100px;border:1px solid #CBD3D0;background:transparent;color:#1E2626;display:grid;place-items:center;cursor:pointer;transition:background .3s,color .3s,border-color .3s" style-hover="background:#1E2626;border-color:#1E2626;color:#FFFFFF">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="m12 19-7-7 7-7"></path></svg>
+      </button>
+      <button type="button" aria-label="Próximo projeto" style="width:44px;height:44px;border-radius:100px;border:1px solid #CBD3D0;background:transparent;color:#1E2626;display:grid;place-items:center;cursor:pointer;transition:background .3s,color .3s,border-color .3s" style-hover="background:#1E2626;border-color:#1E2626;color:#FFFFFF">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<section id="contato" style="background:#232C2C;padding:clamp(80px,10vw,150px) 0">
+  <div style="max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px);text-align:center">
+    <div>
+      <h2 class="rv" style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:clamp(32px,4.2vw,62px);line-height:1.03;letter-spacing:-.02em;color:#FFFFFF;margin:0 auto;max-width:18ch">Sua marca merece ganhar altitude.</h2>
+      <p class="rv" style="margin:24px auto 0;max-width:52ch;font-size:16.5px;line-height:1.7;color:rgba(255,255,255,.66)">Conte em duas linhas o que você precisa. Respondemos com um caminho possível, prazo e valor — sem compromisso.</p>
+      <span class="rv rainbow-cta" style="margin-top:clamp(30px,4vw,46px)">
+        <a href="{{ waHref }}" target="_blank" rel="noopener">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 1 2.2 2 2 0 0 1 3 0h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L7 8a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7A2 2 0 0 1 21 15z"></path></svg>
+          Começar meu projeto
+        </a>
+      </span>
+    </div>
+  </div>
+</section>
+
+<footer style="background:#141A1A;padding:clamp(56px,7vw,96px) 0 32px">
+  <div style="max-width:1320px;margin:0 auto;padding:0 clamp(20px,4vw,48px)">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:clamp(28px,4vw,64px);align-items:start">
+      <div>
+        <img src="assets/logo-white.png" alt="Montis Studio" style="height:34px;width:auto">
+        <p style="margin:22px 0 0;max-width:38ch;font-size:15px;line-height:1.66;color:rgba(255,255,255,.6)">Landing pages e sites para negócios que não querem mais parecer menores do que são.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:24px;justify-self:end;width:100%;max-width:420px">
+        <div style="display:grid;gap:10px;align-content:start">
+          <div style="font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.42)">Navegação</div>
+          <a href="#servicos" style="font-size:14.5px;color:rgba(255,255,255,.78)">Serviços</a>
+          <a href="#projetos" style="font-size:14.5px;color:rgba(255,255,255,.78)">Projetos</a>
+          <a href="#sobre" style="font-size:14.5px;color:rgba(255,255,255,.78)">Sobre</a>
+          <a href="#contato" style="font-size:14.5px;color:rgba(255,255,255,.78)">Contato</a>
+        </div>
+        <div style="display:grid;gap:10px;align-content:start">
+          <div style="font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.42)">Contato</div>
+          <a href="{{ waHref }}" target="_blank" rel="noopener" style="font-size:14.5px;color:rgba(255,255,255,.78)">WhatsApp</a>
+          <a href="mailto:contatocomdiego43@gmail.com" style="font-size:14.5px;color:rgba(255,255,255,.78)">contatocomdiego43@gmail.com</a>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:clamp(40px,5vw,72px);padding-top:22px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;font-size:12.5px;color:rgba(255,255,255,.42)">
+      <span>© 2026 Montis Studio. Todos os direitos reservados.</span>
+      <span>Estratégia · Design · Código</span>
+    </div>
+  </div>
+</footer>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;whatsapp&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;5511999999999&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Contato&quot;},&quot;revealAnimations&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Comportamento&quot;},&quot;showProcess&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Comportamento&quot;}}">
+class Component extends DCLogic {
+  state = { sent: false, active: 1 };
+  rootRef = React.createRef();
+
+  layoutFan() {
+    const root = this.rootRef.current;
+    if (!root) return;
+    const stage = root.querySelector('#fan-stage');
+    const cards = Array.from(root.querySelectorAll('.fan-card'));
+    if (!stage || !cards.length) return;
+    const w = stage.clientWidth || 1000;
+    const compact = w < 620;
+    const cw = compact ? Math.min(300, w * 0.62) : Math.max(180, Math.min(300, w * 0.42));
+    const shown = compact ? 1 : 3;
+    const ch = cw * 4.4 / 3;
+    cards.forEach(el => { el.style.width = cw + 'px'; });
+    const geo = (a) => {
+      const s = 0.9 - Math.min(a - 1, 2) * 0.035;
+      const th = Math.min(a, 3) * 8.5 * Math.PI / 180;
+      const rot = ch * s * Math.sin(th) / 2;
+      const half = (cw * s * Math.cos(th) + ch * s * Math.sin(th)) / 2;
+      const steps = a <= 1 ? a : 1 + (a - 1) * 0.62;
+      return { rot, half, steps };
+    };
+    let spread = cw * 0.62;
+    cards.forEach((_el, i) => {
+      const a = Math.abs(i - this.active);
+      if (!a || a > shown) return;
+      const g = geo(a);
+      spread = Math.min(spread, Math.max(24, (w / 2 - g.half - g.rot - 8) / g.steps));
+    });
+    cards.forEach((el, i) => {
+      const d = i - this.active;
+      const a = Math.abs(d);
+      const sign = Math.sign(d);
+      const vis = a <= shown;
+      const ac = Math.min(a, shown);
+      const dx = sign * spread * (ac <= 1 ? ac : 1 + (ac - 1) * 0.62);
+      el.style.transform = 'translate(-50%,-50%) translateX(' + dx + 'px) translateY(' + (ac * 24) + 'px) rotate(' + (sign * ac * 8.5) + 'deg) scale(' + (d === 0 ? 1 : 0.9 - Math.min(ac - 1, 2) * 0.035) + ')';
+      el.style.zIndex = String(20 - a);
+      el.style.opacity = d === 0 ? '1' : (vis ? '0.9' : '0');
+      el.style.filter = d === 0 ? 'none' : 'brightness(.62) saturate(.8)';
+      el.style.boxShadow = d === 0 ? '0 34px 70px rgba(20,26,26,.34)' : '0 18px 44px rgba(20,26,26,.20)';
+      el.style.pointerEvents = vis ? 'auto' : 'none';
+      const slot = el.querySelector('.fan-slot');
+      if (slot) slot.style.pointerEvents = d === 0 ? 'auto' : 'none';
+    });
+  }
+
+  syncHeader = () => {
+    const root = this.rootRef.current;
+    if (!root) return;
+    const h = root.querySelector('#site-header');
+    if (!h) return;
+    // O limiar vira o fim do pin do hero: enquanto a cena do zoom está rodando,
+    // o cabeçalho não deve mudar de estado. `montis-motion.js` define esse valor.
+    const on = window.scrollY > (window.__montisHeaderAt || 80);
+    h.style.background = on ? 'rgba(20,26,26,.72)' : 'transparent';
+    h.style.backdropFilter = on ? 'blur(18px) saturate(140%)' : 'none';
+    h.style.webkitBackdropFilter = on ? 'blur(18px) saturate(140%)' : 'none';
+    h.style.borderBottomColor = on ? 'rgba(255,255,255,.12)' : 'transparent';
+    h.style.boxShadow = on ? '0 10px 40px rgba(20,26,26,.35)' : 'none';
+    h.style.textShadow = on ? 'none' : '0 2px 18px rgba(20,26,26,.6)';
+  };
+
+  get active() {
+    const root = this.rootRef.current;
+    const stage = root && root.querySelector('#fan-stage');
+    return stage && stage.dataset.active ? Number(stage.dataset.active) : 1;
+  }
+
+  goTo(i) {
+    const root = this.rootRef.current;
+    if (!root) return;
+    const stage = root.querySelector('#fan-stage');
+    const n = root.querySelectorAll('.fan-card').length || 4;
+    if (stage) stage.dataset.active = String(Math.max(0, Math.min(n - 1, i)));
+    this.layoutFan();
+  }
+
+  wireFan() {
+    const root = this.rootRef.current;
+    if (!root) return;
+    root.querySelectorAll('.fan-card').forEach(el => {
+      el.onclick = () => this.goTo(Number(el.getAttribute('data-i')));
+    });
+    const nav = root.querySelectorAll('#fan-nav button');
+    if (nav.length === 2) {
+      nav[0].onclick = () => this.goTo(this.active - 1);
+      nav[1].onclick = () => this.goTo(this.active + 1);
+    }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('scroll', this.syncHeader);
+    window.removeEventListener('resize', this.onResize);
+  }
+
+  onResize = () => this.layoutFan();
+
+  componentDidMount() {
+    const root = this.rootRef.current;
+    this.wireFan();
+    this.layoutFan();
+    this.syncHeader();
+    window.addEventListener('scroll', this.syncHeader, { passive: true });
+    window.addEventListener('resize', this.onResize);
+    setTimeout(() => { this.wireFan(); this.layoutFan(); }, 150);
+    if (!root || this.props.revealAnimations === false) return;
+    root.classList.add('anim');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -6% 0px' });
+    root.querySelectorAll('.rv').forEach(el => {
+      const sibs = Array.from(el.parentElement.children).filter(c => c.classList.contains('rv'));
+      el.style.transitionDelay = Math.min(sibs.indexOf(el), 6) * 70 + 'ms';
+      io.observe(el);
+    });
+  }
+
+  renderVals() {
+    const wa = String(this.props.whatsapp ?? '5511999999999').replace(/\D/g, '');
+    return {
+      rootRef: this.rootRef,
+      waHref: 'https://w.app/montisstudio',
+      sent: this.state.sent,
+      notSent: !this.state.sent,
+      showProcess: this.props.showProcess !== false,
+      submit: (e) => { e.preventDefault(); this.setState({ sent: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
