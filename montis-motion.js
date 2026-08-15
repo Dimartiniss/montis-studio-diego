@@ -140,8 +140,19 @@
           gsap.set('#hero-tag', { opacity: 1 });
           return;
         }
-        montarEntradas();
+        // ORDEM IMPORTA, e custou um bug silencioso: `montarHero` cria o pin, que
+        // insere um espaçador de ~1584px no topo e empurra a página inteira para
+        // baixo. Gatilhos criados ANTES dele calculam suas posições sem esse
+        // espaçador e ficam deslocados exatamente esse tanto — disparando com o
+        // elemento ainda muito abaixo da tela. A animação acontecia fora de
+        // vista e, com `once: true`, o gatilho se matava em seguida: o conteúdo
+        // aparecia sem entrada nenhuma.
+        //
+        // O pin é a primeira coisa da página, então é a primeira a ser montada.
+        // O `refreshPriority: 1` nele garante o mesmo em cada refresh seguinte
+        // (redimensionar a janela, fonte carregando tarde, imagem entrando).
         montarHero(!!ctx.conditions.fone);
+        montarEntradas();
         montarProfundidade();
         montarDetalhes();
         montarAbas();
@@ -447,6 +458,14 @@
         scrub: 1,
         anticipatePin: 1,
         invalidateOnRefresh: true,
+        // Este pin insere um espacador de ~1600px e empurra a pagina inteira
+        // para baixo. Ele PRECISA ser recalculado antes de todos os outros
+        // gatilhos, senao eles medem posicoes que o espacador ainda vai
+        // deslocar — e passam a disparar 1600px cedo demais, fora da tela.
+        // Na GSAP, MAIOR = recalculado PRIMEIRO (o contrario do que o nome
+        // sugere). Medido: com -1 o erro de cada gatilho era -1584px, que e
+        // exatamente o espacador; com 1, erro 0.
+        refreshPriority: 1,
         onRefresh: function () { window.__montisHeaderAt = distancia() + 80; },
         onUpdate: function (self) {
           // "Acima do comum" e o unico elemento que NAO volta atras: uma vez que
