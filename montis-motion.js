@@ -842,7 +842,16 @@
       e.stopPropagation();
       if (andou > LIMITE) { e.preventDefault(); return; }
       var alvo = e.target.closest ? e.target.closest('.fan-card') : null;
-      if (alvo) irPara(cards.indexOf(alvo));
+      if (!alvo) return;
+      var i = cards.indexOf(alvo);
+      // Cartao que NAO esta na frente: o clique serve so para traze-lo. Se o
+      // link agisse aqui, clicar num cartao do fundo mandaria a pessoa para
+      // fora do site antes de ela ter visto o projeto de perto — e ela nem
+      // saberia em que clicou, porque o cartao estava escurecido e girado.
+      if (i !== Math.round(idx)) { e.preventDefault(); irPara(i); return; }
+      // Ja na frente: nao faco nada, e o <a> que cobre o cartao abre o projeto
+      // sozinho. Cartao sem link simplesmente nao reage, que e o certo para os
+      // que ainda nao tem site publicado.
     }, true);
 
     palco.addEventListener('dragstart', function (e) { e.preventDefault(); });

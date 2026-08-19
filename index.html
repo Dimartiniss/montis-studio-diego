@@ -475,8 +475,20 @@ addEventListener('error', function (e) {
       <p style="margin:0;max-width:42ch;font-size:15.5px;line-height:1.66;color:#5C6A68;justify-self:end">Projetos entregues e no ar — clique para ver cada um.</p>
     </div>
 
-    <div id="fan-stage" style="position:relative;height:clamp(430px,58vw,560px);margin:clamp(8px,2vw,24px) 0 0;display:flex;align-items:center;justify-content:center">
+    <div id="fan-stage" data-active="0" style="position:relative;height:clamp(430px,58vw,560px);margin:clamp(8px,2vw,24px) 0 0;display:flex;align-items:center;justify-content:center">
       <div class="fan-card" data-i="0" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
+        <img src="uploads/projeto-nathalia-siqueira.webp" alt="Capa do projeto da Arq Nathália Siqueira: render de casa contemporânea sobre colinas, imagem da hero do site" width="600" height="880" loading="lazy" decoding="async" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block">
+        <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(20,26,26,.28) 0%,rgba(20,26,26,0) 32%,rgba(20,26,26,.82) 100%)"></div>
+        <div style="position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;pointer-events:none">
+          <span style="background:#FFFFFF;color:#1E2626;font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:8px 16px;border-radius:100px">Regularização</span>
+        </div>
+        <div style="position:absolute;left:22px;right:22px;bottom:22px;pointer-events:none">
+          <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:30px;color:#FFFFFF;margin:0 0 6px;letter-spacing:.005em">Arq Nathália Siqueira</h3>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.74)">Habite-se, INSS de obra e regularização de imóveis — sem juridiquês, com um só caminho até o WhatsApp.</p>
+        </div>
+        <a class="fan-abrir" href="https://nathalia-arquiteta-lp.vercel.app/" target="_blank" rel="noopener noreferrer" aria-label="Abrir o site da Arq Nathália Siqueira em uma nova aba" style="position:absolute;inset:0;z-index:4"></a>
+      </div>
+      <div class="fan-card" data-i="1" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
         <div class="fan-slot" style="position:absolute;inset:0;color:rgba(255,255,255,.72)"><image-slot id="montis-proj-1" shape="rect" placeholder="Screenshot QOPS"></image-slot></div>
         <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(20,26,26,.28) 0%,rgba(20,26,26,0) 32%,rgba(20,26,26,.82) 100%)"></div>
         <div style="position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;pointer-events:none">
@@ -485,17 +497,6 @@ addEventListener('error', function (e) {
         <div style="position:absolute;left:22px;right:22px;bottom:22px;pointer-events:none">
           <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:30px;color:#FFFFFF;margin:0 0 6px;letter-spacing:.005em">QOPS</h3>
           <p style="margin:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.74)">Página comercial para operação agrícola: linguagem técnica, um só caminho até o contato.</p>
-        </div>
-      </div>
-      <div class="fan-card" data-i="1" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
-        <div class="fan-slot" style="position:absolute;inset:0;color:rgba(255,255,255,.72)"><image-slot id="montis-proj-2" shape="rect" placeholder="Screenshot Architecture Studio"></image-slot></div>
-        <div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(20,26,26,.28) 0%,rgba(20,26,26,0) 32%,rgba(20,26,26,.82) 100%)"></div>
-        <div style="position:absolute;top:16px;left:0;right:0;display:flex;justify-content:center;pointer-events:none">
-          <span style="background:#FFFFFF;color:#1E2626;font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;padding:8px 16px;border-radius:100px">Arquitetura</span>
-        </div>
-        <div style="position:absolute;left:22px;right:22px;bottom:22px;pointer-events:none">
-          <h3 style="font-family:'Barlow Condensed',system-ui,sans-serif;font-weight:600;font-size:30px;color:#FFFFFF;margin:0 0 6px;letter-spacing:.005em">Architecture Studio</h3>
-          <p style="margin:0;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.74)">Portfólio editorial construído em volta das fotos dos projetos do escritório.</p>
         </div>
       </div>
       <div class="fan-card" data-i="2" style="position:absolute;top:50%;left:50%;width:min(300px,74vw);aspect-ratio:3/4.4;border-radius:16px;overflow:hidden;background:#1E2626;cursor:pointer;transform-origin:50% 100%;transition:transform .65s cubic-bezier(.22,.7,.2,1),opacity .5s ease,filter .5s ease;box-shadow:0 24px 60px rgba(20,26,26,.28)">
