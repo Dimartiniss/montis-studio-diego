@@ -84,34 +84,6 @@
   }
 
   // ---------------------------------------------------------------- helpers
-  //
-  // Pausa dramatica: segura a rolagem por um tempo, uma vez so. Bloqueia roda,
-  // toque e as teclas de rolagem, e ainda devolve a posicao caso alguem arraste
-  // a barra. O `setTimeout` que solta e criado ANTES de qualquer coisa poder dar
-  // errado — travar a pagina para sempre seria a pior falha possivel aqui.
-  var rolagemTravada = false;
-  function travarRolagem(ms) {
-    if (rolagemTravada) return;
-    rolagemTravada = true;
-    var y = window.scrollY;
-    var barra = function (e) { e.preventDefault(); };
-    var volta = function () { window.scrollTo(0, y); };
-    var teclas = function (e) {
-      // espaco, page up/down, home/end, setas
-      if ([32, 33, 34, 35, 36, 38, 40].indexOf(e.keyCode) !== -1) e.preventDefault();
-    };
-    var soltar = function () {
-      window.removeEventListener('wheel', barra);
-      window.removeEventListener('touchmove', barra);
-      window.removeEventListener('keydown', teclas);
-      window.removeEventListener('scroll', volta);
-    };
-    setTimeout(soltar, ms);
-    window.addEventListener('wheel', barra, { passive: false });
-    window.addEventListener('touchmove', barra, { passive: false });
-    window.addEventListener('keydown', teclas, { passive: false });
-    window.addEventListener('scroll', volta, { passive: true });
-  }
 
   function acharTexto(raiz, seletor, trecho) {
     var achado = null;
@@ -485,14 +457,13 @@
             // O tamanho grande e so o destaque da PRIMEIRA aparicao; dali em
             // diante ela vive no tamanho de sempre. Antes ela surgia no tamanho
             // normal e em 1.2s: pequena e rapida demais para dar tempo de ver.
-            var chegada = gsap.timeline({
-              defaults: { ease: 'power3.out' },
-              // Quando a frase termina de se assentar, a rolagem trava por 2s.
-              // Sem isso o mesmo gesto que faz a frase surgir ja empurra a
-              // pagina para a proxima secao, e nao sobra tempo de ver a frase
-              // sobre a montanha.
-              onComplete: function () { travarRolagem(2000); }
-            });
+            // Aqui havia uma pausa dramatica: ao fim da frase a rolagem
+            // travava por 2s, para dar tempo de ve-la sobre a montanha. Foi
+            // removida a pedido — tirar o controle da rolagem da pessoa e
+            // arriscado demais pelo que se ganha: com trackpad, rolagem por
+            // inercia ou um gesto ainda em curso, a pagina volta sozinha para
+            // a posicao travada e da a sensacao de rolagem quebrada.
+            var chegada = gsap.timeline({ defaults: { ease: 'power3.out' } });
             // No celular o 1.38 faria as reguas passarem da borda: os traços
             // laterais mais o texto ja ocupam quase a largura toda ali.
             chegada.fromTo(tag, { scale: 0.78 }, { scale: fone ? 1.12 : 1.38, duration: 1.15 }, 0);
@@ -841,7 +812,17 @@
     palco.addEventListener('click', function (e) {
       e.stopPropagation();
       if (andou > LIMITE) { e.preventDefault(); return; }
+      // De onde sai o cartao: NAO de e.target. Enquanto o palco esta com a
+      // captura do ponteiro (setPointerCapture, que o arrasto usa), o navegador
+      // entrega o clique com o alvo trocado para o proprio palco — o cartao e o
+      // <a> dentro dele nunca veem o evento. Era por isso que clicar no cartao
+      // da frente nao abria nada. A posicao do cursor nao depende da captura,
+      // entao pergunto por ela quando e.target nao ajuda.
       var alvo = e.target.closest ? e.target.closest('.fan-card') : null;
+      if (!alvo && document.elementFromPoint) {
+        var sob = document.elementFromPoint(e.clientX, e.clientY);
+        alvo = sob && sob.closest ? sob.closest('.fan-card') : null;
+      }
       if (!alvo) return;
       var i = cards.indexOf(alvo);
       // Cartao que NAO esta na frente: o clique serve so para traze-lo. Se o
@@ -849,9 +830,17 @@
       // fora do site antes de ela ter visto o projeto de perto — e ela nem
       // saberia em que clicou, porque o cartao estava escurecido e girado.
       if (i !== Math.round(idx)) { e.preventDefault(); irPara(i); return; }
-      // Ja na frente: nao faco nada, e o <a> que cobre o cartao abre o projeto
-      // sozinho. Cartao sem link simplesmente nao reage, que e o certo para os
-      // que ainda nao tem site publicado.
+
+      // Ja na frente: abre o projeto. A navegacao e feita na mao pelo mesmo
+      // motivo acima — nao da para contar que o <a> receba o clique. Cartao sem
+      // link nao reage, que e o certo para quem ainda nao tem site publicado.
+      var link = alvo.querySelector('a.fan-abrir');
+      if (!link) return;
+      // Com ctrl/cmd/shift/alt saio do caminho: sao os atalhos de "abrir em
+      // outra aba/janela", e o navegador faz isso melhor do que eu.
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      window.open(link.href, '_blank', 'noopener');
     }, true);
 
     palco.addEventListener('dragstart', function (e) { e.preventDefault(); });
